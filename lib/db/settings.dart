@@ -1,7 +1,7 @@
 import 'dbobject.dart';
 
 class Settings extends DbObject {
-  String _serverPath;
+  String _serverPath = "";
 
   Settings();
 

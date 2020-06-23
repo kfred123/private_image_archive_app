@@ -10,6 +10,9 @@ class Archiver {
   int processedImages = 0;
   int addedImages = 0;
   int skippedImages = 0;
+  int failedUploads = 0;
+
+  void _onDoneArchivingCallBack;
 
   ServerAccess _serverAccess;
 
@@ -17,28 +20,42 @@ class Archiver {
     _serverAccess = serverAccess;
   }
 
-  void archiveImages(Stream<Image> imageStream) {
+  void archiveImages(Iterable<Image> images) {
     reset();
-    imageStream.listen(this.enqueueImage);
+    totalImages = images.length;
+    for(Image image in images) {
+      enqueueImage(image);
+    }
+  }
+
+  bool isDoneArchiving() {
+    return processedImages >= totalImages;
   }
 
   void enqueueImage(Image image) async {
-    totalImages = totalImages + 1;
     File imageFile = File(image.getPath());
     Uint8List imageData = imageFile.readAsBytesSync();
-    bool uploadResult = await _serverAccess.uploadImage(imageData);
+    String fileName = Uri.parse(image.getPath()).pathSegments.last;
+    UploadImageResult uploadResult = await _serverAccess.uploadImage(imageData, fileName);
     processedImages++;
-    if(uploadResult) {
-      addedImages++;
-    } else {
-      skippedImages++;
+    switch(uploadResult) {
+      case UploadImageResult.Failed:
+        failedUploads++;
+        break;
+      case UploadImageResult.Added:
+        addedImages++;
+        break;
+      case UploadImageResult.AlreadyPresent:
+        skippedImages++;
+        break;
     }
   }
 
   void reset() {
-    int totalImages = 0;
-    int processedImages = 0;
-    int addedImages = 0;
-    int skippedImages = 0;
+    totalImages = 0;
+    processedImages = 0;
+    addedImages = 0;
+    skippedImages = 0;
+    failedUploads = 0;
   }
 }

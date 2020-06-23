@@ -20,22 +20,12 @@ class Image {
 }
 
 class ImageProvider {
-  Stream<Image> readImages() {
-    StreamController<Image> streamController = StreamController<Image>();
-    streamController.onListen = () => {
-          CustomImagePicker.getAllImages.then((images) {
-            for (String uri in images.take(2)) {
-              streamController.add(new Image.ImageByPath(uri));
-            }
-            streamController.close();
-          })
-        };
-    /*getExternalStorageDirectory().then((dir) {
-        dir.list(recursive: true, followLinks: true).listen((fileSystemEntity) {
-          streamController.add(new Image(fileSystemEntity));
-        });
-    });*/
-    Stream<Image> stream = streamController.stream;
-    return stream;
+  Future<List<Image>> readImages() async {
+    List<dynamic> images = await CustomImagePicker.getAllImages;
+    List<Image> result = new List<Image>(images.length);
+    images.asMap().forEach((i, uri) {
+      result[i] = new Image.ImageByPath(uri);
+    });
+    return result;
   }
 }
