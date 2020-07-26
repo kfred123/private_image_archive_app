@@ -77,9 +77,9 @@ class _MyHomePageState extends State<MyHomePage> {
         }
       });
     }
-    Timer(Duration(seconds: 10), () {
+    /*Timer(Duration(seconds: 10), () {
       _checkServerState();
-    });
+    });*/
   }
 
   void _start() async {
@@ -92,8 +92,9 @@ class _MyHomePageState extends State<MyHomePage> {
       _archiver = new Archiver(new ServerAccess(baseUrl));
       logic.ImageProvider imageProvider = new logic.ImageProvider();
       List<logic.Image> images = await imageProvider.readImages();
+      // ToDo Limitierung auf 100 rausnehmen
       _archiver.archiveImages(images.take(100));
-      Timer timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      Timer timer = Timer.periodic(Duration(milliseconds: 100), (timer) {
         this.setState(() => {});
         if(_archiver.isDoneArchiving()) {
           timer.cancel();
@@ -111,6 +112,12 @@ class _MyHomePageState extends State<MyHomePage> {
     return result;
   }
 
+  void _openSettingsPage() async {
+    await Navigator.pushNamed(
+        context, ServerConnectionWidget.RouteName);
+    _checkServerState();
+  }
+
   _MyHomePageState() {
     _checkServerState();
   }
@@ -123,8 +130,8 @@ class _MyHomePageState extends State<MyHomePage> {
         actions: <Widget>[
           RaisedButton(
               child: Text("Settings"),
-              onPressed: () => Navigator.pushNamed(
-                  context, ServerConnectionWidget.RouteName)),
+              onPressed: _openSettingsPage
+          )
         ],
       ),
       body: Center(
@@ -143,6 +150,8 @@ class _MyHomePageState extends State<MyHomePage> {
             Text(_archiver?.processedImages.toString()),
             Text('total image count:'),
             Text(_archiver?.totalImages.toString()),
+            Text('currently processing:'),
+            Text(_archiver?.currentlyProcessing.toString()),
             Text('Progress:', textScaleFactor: 2.0),
             Text(_getProgressPercentage(), textScaleFactor: 2.0)
           ],
