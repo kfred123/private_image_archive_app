@@ -51,7 +51,7 @@ packages:
     source: hosted
     version: "2.1.1"
   crypto:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: crypto
       url: "https://pub.dartlang.org"
@@ -219,6 +219,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.5.5"
+  sprintf:
+    dependency: "direct main"
+    description:
+      name: sprintf
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "4.1.0"
   sqflite:
     dependency: "direct main"
     description:

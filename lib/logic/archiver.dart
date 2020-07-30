@@ -4,8 +4,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:private_image_archive_app/logic/server.dart';
 import 'package:private_image_archive_app/logic/settings_provider.dart';
 import 'package:synchronized/synchronized.dart';
-
+import 'package:crypto/crypto.dart';
 import 'image_provider.dart' as Logic;
+import 'package:private_image_archive_app/logging.dart';
+import 'package:sprintf/sprintf.dart';
 
 class Archiver {
   final int maxProcessingAtOnce = 10;
@@ -39,26 +41,38 @@ class Archiver {
   }
 
   void processNext() {
-    // ToDo testen ob die queue hier richtig funktioniert
     Lock lock = new Lock();
     lock.synchronized(() async {
-      List<Logic.Image> nextImages = images.take(maxProcessingAtOnce - currentlyProcessing);
-      for(Logic.Image image in nextImages) {
+      Set<Logic.Image> nextImages =
+          images.take(maxProcessingAtOnce - currentlyProcessing).toSet();
+      for (Logic.Image image in nextImages) {
         images.remove(image);
-        currentlyProcessing++;
+        changeCurrentlyProcessing(1);
         uploadImage(image);
       }
+    });
+  }
+
+  void changeCurrentlyProcessing(int change) {
+    Lock lock = new Lock();
+    lock.synchronized(() async {
+      currentlyProcessing += change;
     });
   }
 
   void uploadImage(Logic.Image image) async {
     File imageFile = File(image.getPath());
     Uint8List imageData = imageFile.readAsBytesSync();
-    String fileName = Uri.parse(image.getPath()).pathSegments.last;
-    // ToDo Hash berechnen und prüfen mit Server und ggf. Upload überspringen
-    UploadImageResult uploadResult = await _serverAccess.uploadImage(imageData, fileName);
+    String hash = sha256.convert(imageData).toString();
+    UploadImageResult uploadResult;
+    if (await _serverAccess.checkImageExistanceByHash(hash)) {
+      uploadResult = UploadImageResult.AlreadyPresent;
+    } else {
+      String fileName = Uri.parse(image.getPath()).pathSegments.last;
+      uploadResult = await _serverAccess.uploadImage(imageData, fileName);
+    }
     processedImages++;
-    switch(uploadResult) {
+    switch (uploadResult) {
       case UploadImageResult.Failed:
         failedUploads++;
         break;
@@ -67,12 +81,10 @@ class Archiver {
         break;
       case UploadImageResult.AlreadyPresent:
         skippedImages++;
+        Logging.logInfo(sprintf("Skipping %s", [image.getPath()]));
         break;
     }
-    Lock lock = new Lock();
-    lock.synchronized(() async {
-      currentlyProcessing--;
-    });
+    changeCurrentlyProcessing(-1);
     processNext();
   }
 

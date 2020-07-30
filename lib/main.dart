@@ -83,6 +83,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _start() async {
+    // ToDo Videos
     List<PermissionGroup> requestPermissions = new List<PermissionGroup>();
     requestPermissions.add(PermissionGroup.photos);
     Map<PermissionGroup, PermissionStatus> permissions =
