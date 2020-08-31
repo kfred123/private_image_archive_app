@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:private_image_archive_app/logic/archiver.dart';
 import 'package:private_image_archive_app/logic/server.dart';
@@ -93,6 +95,10 @@ class _MyHomePageState extends State<MyHomePage> {
       _archiver = new Archiver(new ServerAccess(baseUrl));
       logic.ImageProvider imageProvider = new logic.ImageProvider();
       List<logic.Image> images = await imageProvider.readImages();
+      Set<String> extensions = new Set();
+      for(logic.Image image in images) {
+        extensions.add(path.extension(image.getPath()));
+      }
       // ToDo Limitierung auf 100 rausnehmen
       _archiver.archiveImages(images.take(100));
       Timer timer = Timer.periodic(Duration(milliseconds: 100), (timer) {
@@ -143,6 +149,8 @@ class _MyHomePageState extends State<MyHomePage> {
             Text(_serverState/*, style: TextStyle(color: _serverStateColor)*/),
             Text('skipped images:'),
             Text(_archiver?.skippedImages.toString()),
+            Text('duplicate on phone:'),
+            Text(_archiver?.duplicateInPhone.toString()),
             Text('failed uploads:'),
             Text(_archiver?.failedUploads.toString()),
             Text('added images:'),

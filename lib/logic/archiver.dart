@@ -17,9 +17,11 @@ class Archiver {
   int addedImages = 0;
   int skippedImages = 0;
   int failedUploads = 0;
+  int duplicateInPhone = 0;
 
   int currentlyProcessing = 0;
   List<Logic.Image> images = new List();
+  Set<String> processedHashes = new Set();
 
   void _onDoneArchivingCallBack;
 
@@ -33,24 +35,34 @@ class Archiver {
     reset();
     totalImages = images.length;
     this.images.addAll(images);
-    processNext();
+    processAll();
   }
 
   bool isDoneArchiving() {
     return processedImages >= totalImages;
   }
 
-  void processNext() {
-    Lock lock = new Lock();
-    lock.synchronized(() async {
-      Set<Logic.Image> nextImages =
-          images.take(maxProcessingAtOnce - currentlyProcessing).toSet();
-      for (Logic.Image image in nextImages) {
-        images.remove(image);
-        changeCurrentlyProcessing(1);
-        uploadImage(image);
+  void processAll() async {
+    while(images.isNotEmpty) {
+      List<Future> uploads = new List();
+      while(uploads.length < maxProcessingAtOnce && images.isNotEmpty) {
+        Logic.Image image = images.removeLast();
+        String hash = calcImageHash(image);
+        if(!processedHashes.contains(hash)) {
+          processedHashes.add(hash);
+          uploads.add(uploadImage(image));
+          changeCurrentlyProcessing(1);
+        } else {
+          countSkippedImage();
+          processedImages++;
+          duplicateInPhone++;
+        }
       }
-    });
+      for(Future future in uploads) {
+        await future;
+      }
+    }
+    int x = 0;
   }
 
   void changeCurrentlyProcessing(int change) {
@@ -60,16 +72,27 @@ class Archiver {
     });
   }
 
-  void uploadImage(Logic.Image image) async {
-    File imageFile = File(image.getPath());
-    Uint8List imageData = imageFile.readAsBytesSync();
+  void countSkippedImage() {
+    Lock lock = new Lock();
+    lock.synchronized(() async {
+      skippedImages++;
+    });
+  }
+
+  String calcImageHash(Logic.Image image) {
+    Uint8List imageData = image.readImageData();
     String hash = sha256.convert(imageData).toString();
+    return hash;
+  }
+
+  Future uploadImage(Logic.Image image) async {
+    String hash = calcImageHash(image);
     UploadImageResult uploadResult;
     if (await _serverAccess.checkImageExistanceByHash(hash)) {
       uploadResult = UploadImageResult.AlreadyPresent;
     } else {
       String fileName = Uri.parse(image.getPath()).pathSegments.last;
-      uploadResult = await _serverAccess.uploadImage(imageData, fileName);
+      uploadResult = await _serverAccess.uploadImage(image.readImageData(), fileName);
     }
     processedImages++;
     switch (uploadResult) {
@@ -80,12 +103,11 @@ class Archiver {
         addedImages++;
         break;
       case UploadImageResult.AlreadyPresent:
-        skippedImages++;
+        countSkippedImage();
         Logging.logInfo(sprintf("Skipping %s", [image.getPath()]));
         break;
     }
     changeCurrentlyProcessing(-1);
-    processNext();
   }
 
   void reset() {
@@ -95,6 +117,8 @@ class Archiver {
     skippedImages = 0;
     failedUploads = 0;
     currentlyProcessing = 0;
+    duplicateInPhone = 0;
     images.clear();
+    processedHashes.clear();
   }
 }

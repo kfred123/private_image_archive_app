@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -23,9 +24,17 @@ class ServerAccess {
   }
 
   Future<bool> isServerAvailable() async {
+    bool isAvailable = false;
     var request = http.Request("GET", Uri.http(_baseUrl, ENDPOINT_REST));
-    var result = await request.send().timeout(Duration(seconds: 10));
-    return HttpStatus.ok == result.statusCode;
+    try {
+      var result = await request.send().timeout(Duration(seconds: 10));
+      isAvailable = HttpStatus.ok == result.statusCode;
+    } on TimeoutException catch(e) {
+      Logging.logException(e.message, e);
+    } on SocketException catch(e) {
+      Logging.logException(e.message, e);
+    }
+    return isAvailable;
   }
 
   void getAllImages() async {
