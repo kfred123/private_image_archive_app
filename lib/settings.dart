@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:private_image_archive_app/db/archived_item.dart';
+import 'package:private_image_archive_app/db/database.dart';
 import 'package:private_image_archive_app/logic/settings_provider.dart';
 import 'package:private_image_archive_app/db/settings.dart';
 
@@ -25,6 +27,11 @@ class ServerConnectionState extends State {
     _settings.setServerPath(_serverTextController.text);
     SettingsProvider.saveSettings(_settings);
     Navigator.pop(context);
+  }
+
+  void clearEntries() async {
+    DataBaseConnection connection = await DataBaseFactory.connect();
+    connection.clearTable(ArchivedItem().getTableName());
   }
 
   @override
@@ -58,6 +65,10 @@ class ServerConnectionState extends State {
                   ),
                   Row(
                     children: <Widget>[
+                      FlatButton(
+                        child: Text("Clear ArchivedEntries"),
+                        onPressed: () => clearEntries(),
+                      ),
                       RaisedButton(
                           child: Text("Save"),
                           onPressed: () => save()

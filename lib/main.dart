@@ -4,18 +4,32 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:private_image_archive_app/db/database.dart';
 import 'package:private_image_archive_app/logic/archiver.dart';
 import 'package:private_image_archive_app/logic/server.dart';
 import 'package:private_image_archive_app/logic/settings_provider.dart';
+import 'package:uuid/uuid.dart';
+import 'db/settings.dart';
 import 'settings.dart';
-import 'logic/image_provider.dart' as logic;
+import 'logic/media_provider.dart' as logic;
 
-void main() => runApp(MyApp());
+void main() {
+  runApp(MyApp());
+}
+
+void initPhoneId() async {
+  Settings settings = await SettingsProvider.getSettings();
+  if(settings.phoneId.isEmpty) {
+    settings.phoneId = new Uuid().v4();
+    SettingsProvider.saveSettings(settings);
+  }
+}
 
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    initPhoneId();
     return MaterialApp(
       routes: <String, WidgetBuilder>{
         ServerConnectionWidget.RouteName: (context) => ServerConnectionWidget()
@@ -85,22 +99,25 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _start() async {
-    // ToDo Videos
     List<PermissionGroup> requestPermissions = new List<PermissionGroup>();
     requestPermissions.add(PermissionGroup.photos);
+    requestPermissions.add(PermissionGroup.storage);
+    requestPermissions.add(PermissionGroup.mediaLibrary);
     Map<PermissionGroup, PermissionStatus> permissions =
         await PermissionHandler().requestPermissions(requestPermissions);
     if (permissions[PermissionGroup.photos] == PermissionStatus.granted) {
       String baseUrl = await SettingsProvider.getServerUrl();
-      _archiver = new Archiver(new ServerAccess(baseUrl));
-      logic.ImageProvider imageProvider = new logic.ImageProvider();
-      List<logic.Image> images = await imageProvider.readImages();
+      DataBaseConnection dataBaseConnection = await DataBaseFactory.connect();
+      _archiver = new Archiver(new ServerAccess(baseUrl), dataBaseConnection);
+      logic.MediaProvider imageProvider = new logic.MediaProvider();
+      List<logic.MediaItem> mediaItems = await imageProvider.readAllMediaData();
       Set<String> extensions = new Set();
-      for(logic.Image image in images) {
+      for(logic.MediaItem image in mediaItems) {
         extensions.add(path.extension(image.getPath()));
       }
       // ToDo Limitierung auf 100 rausnehmen
-      _archiver.archiveImages(images.take(100));
+      //_archiver.archiveMediaItems(mediaItems.take(100));
+      _archiver.archiveMediaItems(mediaItems);
       Timer timer = Timer.periodic(Duration(milliseconds: 100), (timer) {
         this.setState(() => {});
         if(_archiver.isDoneArchiving()) {
@@ -113,7 +130,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String _getProgressPercentage() {
     String result = "";
     if(_archiver != null) {
-      double percentage = 100 * _archiver.processedImages / _archiver.totalImages;
+      int percentage = (100 * _archiver.processedItems / _archiver.totalItems).round();
       result = "$percentage %";
     }
     return result;
@@ -148,17 +165,17 @@ class _MyHomePageState extends State<MyHomePage> {
             Text("server:"),
             Text(_serverState/*, style: TextStyle(color: _serverStateColor)*/),
             Text('skipped images:'),
-            Text(_archiver?.skippedImages.toString()),
+            Text(_archiver?.skippedItems.toString()),
             Text('duplicate on phone:'),
             Text(_archiver?.duplicateInPhone.toString()),
             Text('failed uploads:'),
-            Text(_archiver?.failedUploads.toString()),
+            Text(_archiver?.failedItems.toString()),
             Text('added images:'),
-            Text(_archiver?.addedImages.toString()),
+            Text(_archiver?.addedItems.toString()),
             Text('processed images:'),
-            Text(_archiver?.processedImages.toString()),
+            Text(_archiver?.processedItems.toString()),
             Text('total image count:'),
-            Text(_archiver?.totalImages.toString()),
+            Text(_archiver?.totalItems.toString()),
             Text('currently processing:'),
             Text(_archiver?.currentlyProcessing.toString()),
             Text('Progress:', textScaleFactor: 2.0),

@@ -1,68 +1,79 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_multimedia_picker/data/MediaFile.dart';
+import 'package:private_image_archive_app/db/archived_item.dart';
+import 'package:private_image_archive_app/db/database.dart';
 import 'package:private_image_archive_app/logic/server.dart';
 import 'package:private_image_archive_app/logic/settings_provider.dart';
 import 'package:synchronized/synchronized.dart';
 import 'package:crypto/crypto.dart';
-import 'image_provider.dart' as Logic;
+import 'media_provider.dart' as Logic;
 import 'package:private_image_archive_app/logging.dart';
 import 'package:sprintf/sprintf.dart';
 
 class Archiver {
   final int maxProcessingAtOnce = 10;
+  List<Future> _currentUploads = new List();
 
-  int totalImages = 0;
-  int processedImages = 0;
-  int addedImages = 0;
-  int skippedImages = 0;
-  int failedUploads = 0;
+  int totalItems = 0;
+  int processedItems = 0;
+  int addedItems = 0;
+  int skippedItems = 0;
+  int failedItems = 0;
   int duplicateInPhone = 0;
 
   int currentlyProcessing = 0;
-  List<Logic.Image> images = new List();
+  List<Logic.MediaItem> items = new List();
   Set<String> processedHashes = new Set();
 
   void _onDoneArchivingCallBack;
 
   ServerAccess _serverAccess;
+  DataBaseConnection _dataBaseConnection;
 
-  Archiver(ServerAccess serverAccess) {
+  Archiver(ServerAccess serverAccess, DataBaseConnection dataBaseConnection) {
     _serverAccess = serverAccess;
+    _dataBaseConnection = dataBaseConnection;
   }
 
-  void archiveImages(Iterable<Logic.Image> images) {
+  void archiveMediaItems(Iterable<Logic.MediaItem> items) {
     reset();
-    totalImages = images.length;
-    this.images.addAll(images);
+    totalItems = items.length;
+    this.items.addAll(items);
     processAll();
   }
 
   bool isDoneArchiving() {
-    return processedImages >= totalImages;
+    return processedItems >= totalItems;
   }
 
   void processAll() async {
-    while(images.isNotEmpty) {
-      List<Future> uploads = new List();
-      while(uploads.length < maxProcessingAtOnce && images.isNotEmpty) {
-        Logic.Image image = images.removeLast();
-        String hash = calcImageHash(image);
-        if(!processedHashes.contains(hash)) {
+    processNext();
+  }
+
+  void processNext() {
+    Lock lock = new Lock();
+    lock.synchronized(() async {
+      while (_currentUploads.length < maxProcessingAtOnce && items.isNotEmpty) {
+        Logic.MediaItem mediaItem = items.removeLast();
+        String hash = ""; //calcMediaItemHash(mediaItem);
+        if (true || !processedHashes.contains(hash)) {
           processedHashes.add(hash);
-          uploads.add(uploadImage(image));
+          Future future = uploadMediaItem(mediaItem);
+          _currentUploads.add(future);
+          future.then((result) {
+            _currentUploads.remove(future);
+            processNext();
+          });
           changeCurrentlyProcessing(1);
         } else {
           countSkippedImage();
-          processedImages++;
+          processedItems++;
           duplicateInPhone++;
         }
       }
-      for(Future future in uploads) {
-        await future;
-      }
-    }
-    int x = 0;
+    });
   }
 
   void changeCurrentlyProcessing(int change) {
@@ -75,50 +86,77 @@ class Archiver {
   void countSkippedImage() {
     Lock lock = new Lock();
     lock.synchronized(() async {
-      skippedImages++;
+      skippedItems++;
     });
   }
 
-  String calcImageHash(Logic.Image image) {
-    Uint8List imageData = image.readImageData();
-    String hash = sha256.convert(imageData).toString();
-    return hash;
+  Future<bool> isMediaItemAlreadyArchived(Logic.MediaItem mediaItem) async {
+    String col = ArchivedItem.COL_MEDIA_ITEM_PATH;
+    List<ArchivedItem> items = await _dataBaseConnection.query(() => ArchivedItem(),
+        where: "$col=?", whereArgs: [mediaItem.getPath()]);
+    return items.isNotEmpty;
   }
 
-  Future uploadImage(Logic.Image image) async {
-    String hash = calcImageHash(image);
-    UploadImageResult uploadResult;
-    if (await _serverAccess.checkImageExistanceByHash(hash)) {
-      uploadResult = UploadImageResult.AlreadyPresent;
+  void setMediaItemArchived(Logic.MediaItem mediaItem) {
+    ArchivedItem archivedItem = ArchivedItem();
+    archivedItem.mediaItemPath = mediaItem.getPath();
+    archivedItem.archivedDate = DateTime.now();
+    _dataBaseConnection.updateOrInsert(archivedItem);
+  }
+
+  Future uploadMediaItem(Logic.MediaItem mediaItem) async {
+    UploadResult uploadResult;
+    if(await isMediaItemAlreadyArchived(mediaItem)) {
+      uploadResult = UploadResult.AlreadyArchived;
     } else {
-      String fileName = Uri.parse(image.getPath()).pathSegments.last;
-      uploadResult = await _serverAccess.uploadImage(image.readImageData(), fileName);
-    }
-    processedImages++;
-    switch (uploadResult) {
-      case UploadImageResult.Failed:
-        failedUploads++;
-        break;
-      case UploadImageResult.Added:
-        addedImages++;
-        break;
-      case UploadImageResult.AlreadyPresent:
+      if(mediaItem.getMediaType() == MediaType.IMAGE) {
+        uploadResult = await uploadImage(mediaItem);
+      } else {
+        uploadResult = await uploadVideo(mediaItem);
+      }
+      if(uploadResult == UploadResult.Added) {
+        setMediaItemArchived(mediaItem);
+      } else if(uploadResult == UploadResult.AlreadyArchived){
         countSkippedImage();
-        Logging.logInfo(sprintf("Skipping %s", [image.getPath()]));
+      }
+    }
+
+    processedItems++;
+    switch (uploadResult) {
+      case UploadResult.Failed:
+        failedItems++;
+        break;
+      case UploadResult.Added:
+        addedItems++;
+        break;
+      case UploadResult.AlreadyArchived:
+        countSkippedImage();
+        Logging.logInfo(sprintf("Skipping %s", [mediaItem.getPath()]));
         break;
     }
     changeCurrentlyProcessing(-1);
   }
 
+  Future<UploadResult> uploadVideo(Logic.MediaItem video) async {
+    String fileName = Uri.parse(video.getPath()).pathSegments.last;
+    return await _serverAccess.uploadVideo(video.readFileData(), fileName);
+  }
+
+  Future<UploadResult> uploadImage(Logic.MediaItem image) async {
+    String fileName = Uri.parse(image.getPath()).pathSegments.last;
+    return await _serverAccess.uploadImage(image.readFileData(), fileName);
+  }
+
   void reset() {
-    totalImages = 0;
-    processedImages = 0;
-    addedImages = 0;
-    skippedImages = 0;
-    failedUploads = 0;
+    totalItems = 0;
+    processedItems = 0;
+    addedItems = 0;
+    skippedItems = 0;
+    failedItems = 0;
     currentlyProcessing = 0;
     duplicateInPhone = 0;
-    images.clear();
+    items.clear();
     processedHashes.clear();
+    _currentUploads.clear();
   }
 }

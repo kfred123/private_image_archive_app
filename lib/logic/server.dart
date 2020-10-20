@@ -6,9 +6,9 @@ import 'dart:typed_data';
 import 'package:private_image_archive_app/logging.dart';
 
 
-enum UploadImageResult {
+enum UploadResult {
   Added,
-  AlreadyPresent,
+  AlreadyArchived,
   Failed
 }
 
@@ -17,6 +17,9 @@ class ServerAccess {
   final String ENDPOINT_ADD_IMAGE = "/rest/images";
   final String ENDPOINT_GET_IMAGES = "/rest/images";
   final String ENDPOINT_CHECK_IMAGE_EXISTANCE = "/rest/checkImageExistanceByHash";
+
+  final String ENDPOINT_ADD_VIDEO = "/rest/videos";
+  final String ENDPOINT_CHECK_VIDEO_EXISTANCE = "/rest/checkVideoExistanceByHash";
   String _baseUrl;
 
   ServerAccess(String baseUrl) {
@@ -52,22 +55,51 @@ class ServerAccess {
     return response.statusCode == HttpStatus.ok;
   }
 
-  Future<UploadImageResult> uploadImage(List<int> imageData, String fileName) async {
-    UploadImageResult result = UploadImageResult.Failed;
+  Future<UploadResult> uploadImage(List<int> imageData, String fileName) async {
+    UploadResult result = UploadResult.Failed;
     var request = http.MultipartRequest("POST", Uri.http(_baseUrl, ENDPOINT_ADD_IMAGE));
     request.fields["fileName"] = fileName;
     request.files.add(http.MultipartFile.fromBytes("image", imageData));
     try {
       var response = await request.send();
       if(response.statusCode == HttpStatus.created) {
-        result = UploadImageResult.Added;
+        result = UploadResult.Added;
       } else if(response.statusCode == HttpStatus.found) {
-        result = UploadImageResult.AlreadyPresent;
+        result = UploadResult.AlreadyArchived;
       } else {
         Logging.logError(response.statusCode.toString());
       }
     } catch(exc) {
         Logging.logError(exc.toString());
+    }
+    return result;
+  }
+
+  Future<bool> checkVideoExistanceByHash(String sha256Hash) async {
+    Uri uri = Uri.http(_baseUrl, ENDPOINT_CHECK_VIDEO_EXISTANCE,
+        {"hash" : sha256Hash});
+    var request = http.Request("GET", uri);
+    http.StreamedResponse response = await request.send();
+
+    return response.statusCode == HttpStatus.ok;
+  }
+
+  Future<UploadResult> uploadVideo(List<int> videoData, String fileName) async {
+    UploadResult result = UploadResult.Failed;
+    var request = http.MultipartRequest("POST", Uri.http(_baseUrl, ENDPOINT_ADD_VIDEO));
+    request.fields["fileName"] = fileName;
+    request.files.add(http.MultipartFile.fromBytes("video", videoData));
+    try {
+      var response = await request.send();
+      if(response.statusCode == HttpStatus.created) {
+        result = UploadResult.Added;
+      } else if(response.statusCode == HttpStatus.found) {
+        result = UploadResult.AlreadyArchived;
+      } else {
+        Logging.logError(response.statusCode.toString());
+      }
+    } catch(exc) {
+      Logging.logError(exc.toString());
     }
     return result;
   }
