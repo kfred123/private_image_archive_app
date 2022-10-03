@@ -22,18 +22,17 @@ dependencies:
   sqflite:
   path:
   path_provider:
-  image_picker:
   permission_handler:
-  custom_image_picker:
-  flutter_multimedia_picker:
   http:
   crypto:
   sprintf:
   uuid:
 
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^0.1.2
+  photo_manager: ^2.2.1
 
 dev_dependencies:
   flutter_test:

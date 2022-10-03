@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:private_image_archive_app/db/database.dart';
+import 'package:private_image_archive_app/logic/Permissions.dart';
 import 'package:private_image_archive_app/logic/archiver.dart';
 import 'package:private_image_archive_app/logic/server.dart';
 import 'package:private_image_archive_app/logic/settings_provider.dart';
@@ -99,13 +100,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _start() async {
-    List<PermissionGroup> requestPermissions = new List<PermissionGroup>();
-    requestPermissions.add(PermissionGroup.photos);
-    requestPermissions.add(PermissionGroup.storage);
-    requestPermissions.add(PermissionGroup.mediaLibrary);
-    Map<PermissionGroup, PermissionStatus> permissions =
-        await PermissionHandler().requestPermissions(requestPermissions);
-    if (permissions[PermissionGroup.photos] == PermissionStatus.granted) {
+    if (await PermissionManager.requestPermissions()) {
       String baseUrl = await SettingsProvider.getServerUrl();
       DataBaseConnection dataBaseConnection = await DataBaseFactory.connect();
       _archiver = new Archiver(new ServerAccess(baseUrl), dataBaseConnection);
@@ -152,7 +147,7 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text(widget.title),
         actions: <Widget>[
-          RaisedButton(
+          ElevatedButton(
               child: Text("Settings"),
               onPressed: _openSettingsPage
           )

@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter_multimedia_picker/data/MediaFile.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:private_image_archive_app/db/archived_item.dart';
 import 'package:private_image_archive_app/db/database.dart';
 import 'package:private_image_archive_app/logic/server.dart';
@@ -109,7 +109,7 @@ class Archiver {
     if(await isMediaItemAlreadyArchived(mediaItem)) {
       uploadResult = UploadResult.AlreadyArchived;
     } else {
-      if(mediaItem.getMediaType() == MediaType.IMAGE) {
+      if(mediaItem.getMediaType() == AssetType.image) {
         uploadResult = await uploadImage(mediaItem);
       } else {
         uploadResult = await uploadVideo(mediaItem);
@@ -139,12 +139,12 @@ class Archiver {
 
   Future<UploadResult> uploadVideo(Logic.MediaItem video) async {
     String fileName = Uri.parse(video.getPath()).pathSegments.last;
-    return await _serverAccess.uploadVideo(video.readFileData(), fileName);
+    return await _serverAccess.uploadVideo(await video.readFileData(), fileName);
   }
 
   Future<UploadResult> uploadImage(Logic.MediaItem image) async {
     String fileName = Uri.parse(image.getPath()).pathSegments.last;
-    return await _serverAccess.uploadImage(image.readFileData(), fileName);
+    return await _serverAccess.uploadImage(await image.readFileData(), fileName);
   }
 
   void reset() {

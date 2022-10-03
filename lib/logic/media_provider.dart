@@ -1,48 +1,37 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter_multimedia_picker/data/MediaFile.dart';
-import 'package:flutter_multimedia_picker/fullter_multimedia_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:custom_image_picker/custom_image_picker.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 class MediaItem {
-  String _path;
-  Uint8List _data;
-  MediaType _type;
+  AssetEntity _assetEntity;
 
-  MediaItem(FileSystemEntity fileSystemEntity) {
-    _path = fileSystemEntity.path;
-  }
-
-  MediaItem.ByMediaFile(MediaFile mediaFile) {
-    _path = mediaFile.path;
-    _type = mediaFile.type;
+  MediaItem(AssetEntity assetEntity) {
+    this._assetEntity = assetEntity;
   }
 
   String getPath() {
-    return _path;
+    return _assetEntity.relativePath;
   }
 
-  MediaType getMediaType() {
-    return _type;
+  AssetType getMediaType() {
+    return _assetEntity.type;
   }
 
-  Uint8List readFileData() {
-    if(_data == null)  {
-      File imageFile = File(getPath());
-      _data = imageFile.readAsBytesSync();
-    }
-    return _data;
+  Future<Uint8List> readFileData() async {
+    File file = await _assetEntity.loadFile();
+    return await file.readAsBytes();
   }
 }
 
 class MediaProvider {
   Future<List<MediaItem>> readAllMediaData() async {
-    List<MediaFile> mediaFiles = await FlutterMultiMediaPicker.getAll();
-    List<MediaItem> result = new List<MediaItem>();
-    for(MediaFile mediaFile in mediaFiles) {
-      result.add(MediaItem.ByMediaFile(mediaFile));
+    List<MediaItem> result = List.empty();
+    List<AssetPathEntity> assetPaths = await PhotoManager.getAssetPathList();
+    for(AssetPathEntity assetPath in assetPaths) {
+      result = (await assetPath.getAssetListPaged(page: 0, size: 100)).map((e) => new MediaItem(e));
     }
     return result;
   }

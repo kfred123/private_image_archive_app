@@ -65,11 +65,11 @@ class ServerConnectionState extends State {
                   ),
                   Row(
                     children: <Widget>[
-                      FlatButton(
+                      TextButton(
                         child: Text("Clear ArchivedEntries"),
                         onPressed: () => clearEntries(),
                       ),
-                      RaisedButton(
+                      ElevatedButton(
                           child: Text("Save"),
                           onPressed: () => save()
                       )
