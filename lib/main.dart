@@ -75,6 +75,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Archiver _archiver;
   String _serverState = "unknown";
   Color _serverStateColor = Color.fromARGB(0, 0, 255, 0);
+  Timer _timer;
 
   void _checkServerState() async {
     String serverUrl = await SettingsProvider.getServerUrl();
@@ -105,26 +106,29 @@ class _MyHomePageState extends State<MyHomePage> {
       DataBaseConnection dataBaseConnection = await DataBaseFactory.connect();
       _archiver = new Archiver(new ServerAccess(baseUrl), dataBaseConnection);
       logic.MediaProvider imageProvider = new logic.MediaProvider();
-      List<logic.MediaItem> mediaItems = await imageProvider.readAllMediaData();
-      Set<String> extensions = new Set();
-      for(logic.MediaItem image in mediaItems) {
-        extensions.add(path.extension(image.getPath()));
-      }
-      // ToDo Limitierung auf 100 rausnehmen
-      //_archiver.archiveMediaItems(mediaItems.take(100));
-      _archiver.archiveMediaItems(mediaItems);
-      Timer timer = Timer.periodic(Duration(milliseconds: 100), (timer) {
+      Stream<logic.MediaItem> mediaItemStream = imageProvider.readAllMediaData();
+
+      //for(logic.MediaItem image in mediaItems) {
+      //  extensions.add(path.extension(image.getPath()));
+      //}
+      _archiver.archiveMediaItems(mediaItemStream);
+      _timer = Timer.periodic(Duration(milliseconds: 100), (timer) {
         this.setState(() => {});
         if(_archiver.isDoneArchiving()) {
-          timer.cancel();
+          //timer.cancel();
         }
       });
     }
   }
 
+  void _cancel() {
+    _archiver.cancel();
+    _timer.cancel();
+  }
+
   String _getProgressPercentage() {
     String result = "";
-    if(_archiver != null) {
+    if(_archiver != null && _archiver.totalItems != 0) {
       int percentage = (100 * _archiver.processedItems / _archiver.totalItems).round();
       result = "$percentage %";
     }
@@ -171,18 +175,35 @@ class _MyHomePageState extends State<MyHomePage> {
             Text(_archiver?.processedItems.toString()),
             Text('total image count:'),
             Text(_archiver?.totalItems.toString()),
-            Text('currently processing:'),
-            Text(_archiver?.currentlyProcessing.toString()),
+            //Text('currently processing:'),
+           // Text(_archiver?.currentlyProcessing.toString()),
             Text('Progress:', textScaleFactor: 2.0),
             Text(_getProgressPercentage(), textScaleFactor: 2.0)
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _start,
-        tooltip: 'Run',
-        child: Icon(Icons.backup),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      floatingActionButton: Stack(
+          children: <Widget>[
+            Align(
+              alignment: Alignment.bottomRight,
+              child: FloatingActionButton(
+                onPressed: _start,
+                tooltip: 'Run',
+                heroTag: null,
+                child: Icon(Icons.backup),
+              ),
+            ),
+            Align(
+              alignment: Alignment.bottomLeft,
+              child: FloatingActionButton(
+                onPressed: _cancel,
+                tooltip: 'Cancel',
+                heroTag: null,
+                child: Icon(Icons.cancel),
+              ),
+            )            ,
+          ],
+      ),
     );
   }
 }

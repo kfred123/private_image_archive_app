@@ -1,4 +1,7 @@
+import 'dart:collection';
 import 'dart:io';
+import 'package:pool/pool.dart';
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/cupertino.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -14,7 +17,6 @@ import 'package:sprintf/sprintf.dart';
 
 class Archiver {
   final int maxProcessingAtOnce = 10;
-  List<Future> _currentUploads = new List();
 
   int totalItems = 0;
   int processedItems = 0;
@@ -23,9 +25,9 @@ class Archiver {
   int failedItems = 0;
   int duplicateInPhone = 0;
 
-  int currentlyProcessing = 0;
-  List<Logic.MediaItem> items = new List();
+  Queue<Logic.MediaItem> queue = new Queue();
   Set<String> processedHashes = new Set();
+  Pool _pool;
 
   void _onDoneArchivingCallBack;
 
@@ -37,50 +39,26 @@ class Archiver {
     _dataBaseConnection = dataBaseConnection;
   }
 
-  void archiveMediaItems(Iterable<Logic.MediaItem> items) {
+  void archiveMediaItems(Stream<Logic.MediaItem> items) async {
     reset();
-    totalItems = items.length;
-    this.items.addAll(items);
-    processAll();
+    _pool = new Pool(maxProcessingAtOnce, timeout: Duration(seconds: 60));
+    items.listen((item) {
+      Lock lock = new Lock();
+      lock.synchronized(() async {
+        queue.add(item);
+        totalItems++;
+      });
+      _pool.withResource(() => uploadMediaItem(item));
+    });
+  }
+
+  void cancel() {
+    _pool.close();
+    reset();
   }
 
   bool isDoneArchiving() {
-    return processedItems >= totalItems;
-  }
-
-  void processAll() async {
-    processNext();
-  }
-
-  void processNext() {
-    Lock lock = new Lock();
-    lock.synchronized(() async {
-      while (_currentUploads.length < maxProcessingAtOnce && items.isNotEmpty) {
-        Logic.MediaItem mediaItem = items.removeLast();
-        String hash = ""; //calcMediaItemHash(mediaItem);
-        if (true || !processedHashes.contains(hash)) {
-          processedHashes.add(hash);
-          Future future = uploadMediaItem(mediaItem);
-          _currentUploads.add(future);
-          future.then((result) {
-            _currentUploads.remove(future);
-            processNext();
-          });
-          changeCurrentlyProcessing(1);
-        } else {
-          countSkippedImage();
-          processedItems++;
-          duplicateInPhone++;
-        }
-      }
-    });
-  }
-
-  void changeCurrentlyProcessing(int change) {
-    Lock lock = new Lock();
-    lock.synchronized(() async {
-      currentlyProcessing += change;
-    });
+    return totalItems > 0 && processedItems >= totalItems;
   }
 
   void countSkippedImage() {
@@ -91,16 +69,14 @@ class Archiver {
   }
 
   Future<bool> isMediaItemAlreadyArchived(Logic.MediaItem mediaItem) async {
-    String col = ArchivedItem.COL_MEDIA_ITEM_PATH;
+    String col = ArchivedItem.COL_MEDIAITEM_ID;
     List<ArchivedItem> items = await _dataBaseConnection.query(() => ArchivedItem(),
-        where: "$col=?", whereArgs: [mediaItem.getPath()]);
+        where: "$col=?", whereArgs: [mediaItem.getId()]);
     return items.isNotEmpty;
   }
 
   void setMediaItemArchived(Logic.MediaItem mediaItem) {
-    ArchivedItem archivedItem = ArchivedItem();
-    archivedItem.mediaItemPath = mediaItem.getPath();
-    archivedItem.archivedDate = DateTime.now();
+    ArchivedItem archivedItem = ArchivedItem.fromMediaItem(mediaItem.getPath(), mediaItem.getPath());
     _dataBaseConnection.updateOrInsert(archivedItem);
   }
 
@@ -134,7 +110,6 @@ class Archiver {
         Logging.logInfo(sprintf("Skipping %s", [mediaItem.getPath()]));
         break;
     }
-    changeCurrentlyProcessing(-1);
   }
 
   Future<UploadResult> uploadVideo(Logic.MediaItem video) async {
@@ -143,8 +118,7 @@ class Archiver {
   }
 
   Future<UploadResult> uploadImage(Logic.MediaItem image) async {
-    String fileName = Uri.parse(image.getPath()).pathSegments.last;
-    return await _serverAccess.uploadImage(await image.readFileData(), fileName);
+    return await _serverAccess.uploadImage(await image.readFileData(), image.getName());
   }
 
   void reset() {
@@ -153,10 +127,8 @@ class Archiver {
     addedItems = 0;
     skippedItems = 0;
     failedItems = 0;
-    currentlyProcessing = 0;
     duplicateInPhone = 0;
-    items.clear();
+    queue.clear();
     processedHashes.clear();
-    _currentUploads.clear();
   }
 }

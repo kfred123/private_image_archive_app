@@ -14,6 +14,11 @@ class DataBaseFactory {
     return DataBaseConnection(db);
   }
 
+  static delete() async {
+    String dbPath = await getDatabasesPath();
+    deleteDatabase(dbPath);
+  }
+
   static FutureOr onCreate(Database db, int version) {
     createTable(db, Settings());
     createTable(db, ArchivedItem());

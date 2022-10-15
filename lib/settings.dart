@@ -34,6 +34,9 @@ class ServerConnectionState extends State {
     connection.clearTable(ArchivedItem().getTableName());
   }
 
+  void deleteDatabase() async {
+    DataBaseFactory.delete();
+  }
   @override
   Widget build(BuildContext context) {
     init();
@@ -65,13 +68,25 @@ class ServerConnectionState extends State {
                   ),
                   Row(
                     children: <Widget>[
+                      ElevatedButton(
+                          child: Text("Save"),
+                          onPressed: () => save()
+                      )
+                    ],
+                  ),
+                  Row(
+                    children: [
                       TextButton(
                         child: Text("Clear ArchivedEntries"),
                         onPressed: () => clearEntries(),
                       ),
-                      ElevatedButton(
-                          child: Text("Save"),
-                          onPressed: () => save()
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      TextButton(
+                          child: Text("Delete Database"),
+                          onPressed: () => deleteDatabase(),
                       )
                     ],
                   ),
