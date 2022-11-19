@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:html';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -145,8 +146,17 @@ class _MyHomePageState extends State<MyHomePage> {
     _checkServerState();
   }
 
+  List<Text> _getFailedItems() {
+    List<Text> result = List.empty(growable: true);
+    for(String item in _archiver.failedItemList) {
+      Text element = new Text(item);
+  }
+    return result;
+  }
+
   @override
   Widget build(BuildContext context) {
+    // ToDo add a view to show archived images to set missing creation dates
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -178,7 +188,10 @@ class _MyHomePageState extends State<MyHomePage> {
             //Text('currently processing:'),
            // Text(_archiver?.currentlyProcessing.toString()),
             Text('Progress:', textScaleFactor: 2.0),
-            Text(_getProgressPercentage(), textScaleFactor: 2.0)
+            Text(_getProgressPercentage(), textScaleFactor: 2.0),
+            ListView(
+              children: _getFailedItems()
+            )
           ],
         ),
       ),

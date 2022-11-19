@@ -41,11 +41,16 @@ class MediaProvider {
     for(AssetPathEntity assetPath in assetPaths) {
       List<MediaItem> items;
       int page = 0;
+      int count = 0;
       do {
         items = (await assetPath.getAssetListPaged(page: page, size: 100))
             .map((e) => new MediaItem(e)).toList();
-        for(MediaItem mediaItem in items) {
+        for(MediaItem mediaItem in items.where((element) => element.getMediaType() == AssetType.video)) {
           yield mediaItem;
+          count++;
+          //if(count > 99) {
+          //  return;
+          //}
         }
         page++;
       } while(items.isNotEmpty);

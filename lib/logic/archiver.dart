@@ -28,6 +28,7 @@ class Archiver {
   Queue<Logic.MediaItem> queue = new Queue();
   Set<String> processedHashes = new Set();
   Pool _pool;
+  List<String> failedItemList = List.empty(growable: true);
 
   void _onDoneArchivingCallBack;
 
@@ -101,6 +102,7 @@ class Archiver {
     switch (uploadResult) {
       case UploadResult.Failed:
         failedItems++;
+        failedItemList.add(mediaItem.getPath() + "/" + mediaItem.getName());
         break;
       case UploadResult.Added:
         addedItems++;
