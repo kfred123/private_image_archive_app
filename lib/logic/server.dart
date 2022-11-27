@@ -17,6 +17,8 @@ class ServerAccess {
   final String ENDPOINT_ADD_IMAGE = "/rest/images";
   final String ENDPOINT_GET_IMAGES = "/rest/images";
   final String ENDPOINT_CHECK_IMAGE_EXISTANCE = "/rest/checkImageExistanceByHash";
+  final String ENDPOINT_DELETE_ALL_IMAGES = "/rest/images/deleteAllDebug";
+  final String ENDPOINT_DELETE_ALL_VIDEOS = "/rest/videos/deleteAllDebug";
 
   final String ENDPOINT_ADD_VIDEO = "/rest/videos";
   final String ENDPOINT_CHECK_VIDEO_EXISTANCE = "/rest/checkVideoExistanceByHash";
@@ -102,5 +104,25 @@ class ServerAccess {
       Logging.logError(exc.toString());
     }
     return result;
+  }
+  
+  Future<void> deleteAllImagesAndVideos() async {
+    await deleteAllImages();
+    await deleteAllVideos();
+  }
+
+  Future<void> deleteAllImages() async {
+    var response = await http.delete(Uri.http(_baseUrl, ENDPOINT_DELETE_ALL_IMAGES));
+    if (response.statusCode != HttpStatus.ok) {
+      throw Exception(
+          "Delete all images returned ${response.statusCode} : ${response.body}");
+    }
+  }
+
+  Future<void> deleteAllVideos() async {
+    var response = await http.delete(Uri.http(_baseUrl, ENDPOINT_DELETE_ALL_VIDEOS));
+    if(response.statusCode != HttpStatus.ok) {
+      throw Exception("Delete all videos returned ${response.statusCode} : ${response.body}");
+    }
   }
 }

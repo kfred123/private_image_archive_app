@@ -1,10 +1,6 @@
 import 'dart:async';
-import 'dart:html';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as path;
-import 'package:permission_handler/permission_handler.dart';
 import 'package:private_image_archive_app/db/database.dart';
 import 'package:private_image_archive_app/logic/Permissions.dart';
 import 'package:private_image_archive_app/logic/archiver.dart';
@@ -13,6 +9,7 @@ import 'package:private_image_archive_app/logic/settings_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'db/settings.dart';
 import 'settings.dart';
+import 'debugPage.dart';
 import 'logic/media_provider.dart' as logic;
 
 void main() {
@@ -34,7 +31,8 @@ class MyApp extends StatelessWidget {
     initPhoneId();
     return MaterialApp(
       routes: <String, WidgetBuilder>{
-        ServerConnectionWidget.RouteName: (context) => ServerConnectionWidget()
+        ServerConnectionWidget.RouteName: (context) => ServerConnectionWidget(),
+        DebugWidget.RouteName: (context) => DebugWidget()
       },
       title: 'Private Image Archive',
       theme: ThemeData(
@@ -142,15 +140,21 @@ class _MyHomePageState extends State<MyHomePage> {
     _checkServerState();
   }
 
+  void _openDebugPage() async {
+    await Navigator.pushNamed(context, DebugWidget.RouteName);
+  }
+
   _MyHomePageState() {
     _checkServerState();
   }
 
   List<Text> _getFailedItems() {
     List<Text> result = List.empty(growable: true);
-    for(String item in _archiver.failedItemList) {
-      Text element = new Text(item);
-  }
+    if(_archiver != null && _archiver.failedItemList != null) {
+      for (String item in _archiver.failedItemList) {
+        Text element = new Text(item);
+      }
+    }
     return result;
   }
 
@@ -164,7 +168,10 @@ class _MyHomePageState extends State<MyHomePage> {
           ElevatedButton(
               child: Text("Settings"),
               onPressed: _openSettingsPage
-          )
+          ),
+          ElevatedButton(
+              onPressed: _openDebugPage,
+              child: Text("Debug"))
         ],
       ),
       body: Center(
@@ -189,9 +196,9 @@ class _MyHomePageState extends State<MyHomePage> {
            // Text(_archiver?.currentlyProcessing.toString()),
             Text('Progress:', textScaleFactor: 2.0),
             Text(_getProgressPercentage(), textScaleFactor: 2.0),
-            ListView(
-              children: _getFailedItems()
-            )
+            //ListView(
+            //  children: _getFailedItems()
+            //)
           ],
         ),
       ),
