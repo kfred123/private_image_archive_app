@@ -11,6 +11,7 @@ import 'db/settings.dart';
 import 'settings.dart';
 import 'debugPage.dart';
 import 'logic/media_provider.dart' as logic;
+import 'sidenavigation.dart';
 
 void main() {
   runApp(MyApp());
@@ -31,6 +32,7 @@ class MyApp extends StatelessWidget {
     initPhoneId();
     return MaterialApp(
       routes: <String, WidgetBuilder>{
+        SyncPage.RouteName: (context) => SyncPage(),
         ServerConnectionWidget.RouteName: (context) => ServerConnectionWidget(),
         DebugWidget.RouteName: (context) => DebugWidget()
       },
@@ -47,13 +49,17 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: Scaffold(
+        drawer: SideNavigation(),
+      )
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
+class SyncPage extends StatefulWidget {
+  static const String RouteName = "/SyncPageWidget";
+
+  SyncPage({Key key, this.title}) : super(key: key);
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -67,10 +73,10 @@ class MyHomePage extends StatefulWidget {
   final String title;
 
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  _SyncPageState createState() => _SyncPageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _SyncPageState extends State<SyncPage> {
   Archiver _archiver;
   String _serverState = "unknown";
   Color _serverStateColor = Color.fromARGB(0, 0, 255, 0);
@@ -144,7 +150,7 @@ class _MyHomePageState extends State<MyHomePage> {
     await Navigator.pushNamed(context, DebugWidget.RouteName);
   }
 
-  _MyHomePageState() {
+  _SyncPageState() {
     _checkServerState();
   }
 
