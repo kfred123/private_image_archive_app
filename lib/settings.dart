@@ -17,7 +17,7 @@ class ServerConnectionWidget extends StatefulWidget {
 
 class ServerConnectionState extends State {
   TextEditingController _serverTextController = TextEditingController();
-  Settings _settings;
+  late Settings _settings;
   void init() async {
     _settings = await SettingsProvider.getSettings();
     _serverTextController.text = _settings.getServerPath();

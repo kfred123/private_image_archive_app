@@ -27,7 +27,7 @@ class Archiver {
 
   Queue<Logic.MediaItem> queue = new Queue();
   Set<String> processedHashes = new Set();
-  Pool _pool;
+  late Pool _pool;
   List<String> failedItemList = List.empty(growable: true);
 
   void _onDoneArchivingCallBack;
@@ -35,10 +35,9 @@ class Archiver {
   ServerAccess _serverAccess;
   DataBaseConnection _dataBaseConnection;
 
-  Archiver(ServerAccess serverAccess, DataBaseConnection dataBaseConnection) {
-    _serverAccess = serverAccess;
-    _dataBaseConnection = dataBaseConnection;
-  }
+  Archiver(ServerAccess serverAccess, DataBaseConnection dataBaseConnection)
+      : _serverAccess = serverAccess,
+        _dataBaseConnection = dataBaseConnection;
 
   void archiveMediaItems(Stream<Logic.MediaItem> items) async {
     reset();
@@ -70,9 +69,7 @@ class Archiver {
   }
 
   Future<bool> isMediaItemAlreadyArchived(Logic.MediaItem mediaItem) async {
-    String col = ArchivedItem.COL_MEDIAITEM_ID;
-    List<ArchivedItem> items = await _dataBaseConnection.query(() => ArchivedItem(),
-        where: "$col=?", whereArgs: [mediaItem.getId()]);
+    Iterable<ArchivedItem> items = await _dataBaseConnection.query<ArchivedItem>((item) => mediaItem.getId() == item.mediaItemId);
     return items.isNotEmpty;
   }
 

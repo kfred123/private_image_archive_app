@@ -1,25 +1,19 @@
+import 'package:hive_flutter/adapters.dart';
 import 'package:uuid/uuid.dart';
+import 'HiveTypes.dart';
 
 import 'dbobject.dart';
 
+part 'settings.g.dart';
+
+@HiveType(typeId: HiveTypes.SETTINGS)
 class Settings extends DbObject {
+  @HiveField(1)
   String _serverPath = "";
+  @HiveField(2)
   String _phoneId = "";
 
   Settings();
-
-  @override
-  List<DbColumn> getColumns() {
-    return [
-      new DbColumn("serverPath", DbColumn.TYPE_TEXT, () => _serverPath, (val) => _serverPath = val),
-      new DbColumn("phoneId", DbColumn.TYPE_TEXT, () => _phoneId, (val) => _phoneId = val)
-    ];
-  }
-
-  @override
-  String getTableName() {
-    return "Settings";
-  }
 
   String getServerPath() {
     return _serverPath;

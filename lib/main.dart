@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
     initPhoneId();
     return MaterialApp(
       routes: <String, WidgetBuilder>{
-        SyncPage.RouteName: (context) => SyncPage(),
+        SyncPage.RouteName: (context) => SyncPage(title: "SyncPage"),
         ServerConnectionWidget.RouteName: (context) => ServerConnectionWidget(),
         DebugWidget.RouteName: (context) => DebugWidget()
       },
@@ -59,7 +59,7 @@ class MyApp extends StatelessWidget {
 class SyncPage extends StatefulWidget {
   static const String RouteName = "/SyncPageWidget";
 
-  SyncPage({Key key, this.title}) : super(key: key);
+  SyncPage({Key? key, required this.title}) : super(key: key);
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -77,10 +77,10 @@ class SyncPage extends StatefulWidget {
 }
 
 class _SyncPageState extends State<SyncPage> {
-  Archiver _archiver;
+  Archiver? _archiver;
   String _serverState = "unknown";
   Color _serverStateColor = Color.fromARGB(0, 0, 255, 0);
-  Timer _timer;
+  Timer? _timer;
 
   void _checkServerState() async {
     String serverUrl = await SettingsProvider.getServerUrl();
@@ -116,10 +116,10 @@ class _SyncPageState extends State<SyncPage> {
       //for(logic.MediaItem image in mediaItems) {
       //  extensions.add(path.extension(image.getPath()));
       //}
-      _archiver.archiveMediaItems(mediaItemStream);
+      _archiver!.archiveMediaItems(mediaItemStream);
       _timer = Timer.periodic(Duration(milliseconds: 100), (timer) {
         this.setState(() => {});
-        if(_archiver.isDoneArchiving()) {
+        if(_archiver!.isDoneArchiving()) {
           //timer.cancel();
         }
       });
@@ -127,14 +127,14 @@ class _SyncPageState extends State<SyncPage> {
   }
 
   void _cancel() {
-    _archiver.cancel();
-    _timer.cancel();
+    _archiver!.cancel();
+    _timer!.cancel();
   }
 
   String _getProgressPercentage() {
     String result = "";
-    if(_archiver != null && _archiver.totalItems != 0) {
-      int percentage = (100 * _archiver.processedItems / _archiver.totalItems).round();
+    if(_archiver != null && _archiver!.totalItems != 0) {
+      int percentage = (100 * _archiver!.processedItems / _archiver!.totalItems).round();
       result = "$percentage %";
     }
     return result;
@@ -156,12 +156,16 @@ class _SyncPageState extends State<SyncPage> {
 
   List<Text> _getFailedItems() {
     List<Text> result = List.empty(growable: true);
-    if(_archiver != null && _archiver.failedItemList != null) {
-      for (String item in _archiver.failedItemList) {
+    if(_archiver != null && _archiver!.failedItemList != null) {
+      for (String item in _archiver!.failedItemList) {
         Text element = new Text(item);
       }
     }
     return result;
+  }
+
+  String getIntOrEmptyString(int? number) {
+    return number != null ? number.toString() : "";
   }
 
   @override
@@ -187,17 +191,17 @@ class _SyncPageState extends State<SyncPage> {
             Text("server:"),
             Text(_serverState/*, style: TextStyle(color: _serverStateColor)*/),
             Text('skipped images:'),
-            Text(_archiver?.skippedItems.toString()),
+            Text(getIntOrEmptyString(_archiver?.skippedItems)),
             Text('duplicate on phone:'),
-            Text(_archiver?.duplicateInPhone.toString()),
+            Text(getIntOrEmptyString(_archiver?.duplicateInPhone)),
             Text('failed uploads:'),
-            Text(_archiver?.failedItems.toString()),
+            Text(getIntOrEmptyString(_archiver?.failedItems)),
             Text('added images:'),
-            Text(_archiver?.addedItems.toString()),
+            Text(getIntOrEmptyString(_archiver?.addedItems)),
             Text('processed images:'),
-            Text(_archiver?.processedItems.toString()),
+            Text(getIntOrEmptyString(_archiver?.processedItems)),
             Text('total image count:'),
-            Text(_archiver?.totalItems.toString()),
+            Text(getIntOrEmptyString(_archiver?.totalItems)),
             //Text('currently processing:'),
            // Text(_archiver?.currentlyProcessing.toString()),
             Text('Progress:', textScaleFactor: 2.0),

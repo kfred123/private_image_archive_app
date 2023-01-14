@@ -1,11 +1,18 @@
+import 'package:hive_flutter/adapters.dart';
+
+import 'HiveTypes.dart';
 import 'dbobject.dart';
+
+part 'archived_item.g.dart';
+
+@HiveType(typeId: HiveTypes.ARCHIVED_ITEM)
 class ArchivedItem extends DbObject {
-  static final String COL_MEDIA_ITEM_PATH = "mediaItemPath";
-  static final String COL_ARCHIVED_DATE = "archivedDate";
-  static final String COL_MEDIAITEM_ID = "_mediaItemId";
+  @HiveField(1)
   String _mediaItemPath = "";
+  @HiveField(2)
   String _mediaItemId = "";
-  DateTime _archivedDate = null;
+  @HiveField(3)
+  DateTime? _archivedDate;
 
   ArchivedItem();
 
@@ -15,23 +22,9 @@ class ArchivedItem extends DbObject {
     _archivedDate = DateTime.now();
   }
 
-  @override
-  List<DbColumn> getColumns() {
-    return [
-      new DbColumn(COL_MEDIAITEM_ID, DbColumn.TYPE_TEXT, () => _mediaItemId, (p0) => _mediaItemId = p0),
-      new DbColumn(COL_MEDIA_ITEM_PATH, DbColumn.TYPE_TEXT, () => _mediaItemPath, (value) => _mediaItemPath = value),
-      new DbColumn(COL_ARCHIVED_DATE, DbColumn.TYPE_TEXT, () => _archivedDate.toIso8601String(), (value) => _archivedDate = DateTime.tryParse(value))
-    ];
-  }
+  DateTime? get archivedDate => _archivedDate;
 
-  @override
-  String getTableName() {
-    return "ArchivedItem";
-  }
-
-  DateTime get archivedDate => _archivedDate;
-
-  set archivedDate(DateTime value) {
+  set archivedDate(DateTime? value) {
     _archivedDate = value;
   }
 
@@ -40,4 +33,6 @@ class ArchivedItem extends DbObject {
   set mediaItemPath(String value) {
     _mediaItemPath = value;
   }
+
+  String get mediaItemId => _mediaItemId;
 }

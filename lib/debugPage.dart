@@ -9,7 +9,7 @@ import 'db/archived_item.dart';
 
 class DebugWidget extends StatelessWidget {
   static const String RouteName = "/DebugWidget";
-  BuildContext _context;
+  BuildContext? _context;
 
   @override
   Widget build(BuildContext context) {
@@ -37,15 +37,15 @@ class DebugWidget extends StatelessWidget {
     try {
       await serverAccess.deleteAllImagesAndVideos();
       await DataBaseFactory.delete();
-      showDebugDialog(_context, "DONE");
+      showDebugDialog(_context!, "DONE");
     } catch(e) {
-      showDebugDialog(_context, e.toString());
+      showDebugDialog(_context!, e.toString());
     }
   }
 
   void clearEntries() async {
     DataBaseConnection connection = await DataBaseFactory.connect();
-    connection.clearTable(ArchivedItem().getTableName());
+    connection.clearTable<ArchivedItem>();
   }
 
   void deleteDatabase() async {

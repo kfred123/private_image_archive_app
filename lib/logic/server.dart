@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:typed_data';
 import 'package:private_image_archive_app/logging.dart';
+import 'package:private_image_archive_app/logic/helper.dart';
 
 
 enum UploadResult {
@@ -24,9 +25,7 @@ class ServerAccess {
   final String ENDPOINT_CHECK_VIDEO_EXISTANCE = "/rest/checkVideoExistanceByHash";
   String _baseUrl;
 
-  ServerAccess(String baseUrl) {
-    _baseUrl = baseUrl;
-  }
+  ServerAccess(String baseUrl) : _baseUrl = baseUrl;
 
   Future<bool> isServerAvailable() async {
     bool isAvailable = false;
@@ -35,7 +34,7 @@ class ServerAccess {
       var result = await request.send().timeout(Duration(seconds: 10));
       isAvailable = HttpStatus.ok == result.statusCode;
     } on TimeoutException catch(e) {
-      Logging.logException(e.message, e);
+      Logging.logException(getString(e.message), e);
     } on SocketException catch(e) {
       Logging.logException(e.message, e);
     }

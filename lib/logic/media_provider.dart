@@ -6,23 +6,23 @@ import 'dart:ui';
 import 'package:path_provider/path_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:path/path.dart' as Path;
+import 'helper.dart';
 
 class MediaItem {
   AssetEntity _assetEntity;
 
-  MediaItem(AssetEntity assetEntity) {
-    this._assetEntity = assetEntity;
-  }
+  MediaItem(AssetEntity assetEntity) : _assetEntity = assetEntity;
 
   String getId() {
     return _assetEntity.id;
   }
+
   String getPath() {
-    return Path.join(_assetEntity.relativePath, _assetEntity.title);
+    return Path.join(getString(_assetEntity?.relativePath), _assetEntity.title);
   }
 
   String getName() {
-    return _assetEntity.title;
+    return getString(_assetEntity.title);
   }
 
   AssetType getMediaType() {
@@ -30,8 +30,8 @@ class MediaItem {
   }
 
   Future<Uint8List> readFileData() async {
-    File file = await _assetEntity.loadFile();
-    return await file.readAsBytes();
+    File? file = await _assetEntity.loadFile();
+    return await file!.readAsBytes();
   }
 }
 
