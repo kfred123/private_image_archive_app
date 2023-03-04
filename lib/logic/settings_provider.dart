@@ -20,7 +20,9 @@ class SettingsProvider {
   }
 
   static void saveSettings(Settings settings) async {
+    Logging.logInfo("Start saveSetting");
     DataBaseConnection dbConnection = await DataBaseFactory.connect();
     dbConnection.updateOrInsert(settings);
+    Logging.logInfo("End saveSettings");
   }
 }
