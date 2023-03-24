@@ -30,8 +30,11 @@ class ServerAccess {
   Future<bool> isServerAvailable() async {
     bool isAvailable = false;
     var request = http.Request("GET", Uri.http(_baseUrl, ENDPOINT_REST));
+    request.headers.putIfAbsent("Access-Control-Allow-Origin", () => "*");
     try {
+      Logging.logInfo("Checking isServerAvailable: ${request.url}");
       var result = await request.send().timeout(Duration(seconds: 10));
+      Logging.logInfo("Result isServerAvailable: ${result.statusCode}");
       isAvailable = HttpStatus.ok == result.statusCode;
     } on TimeoutException catch(e) {
       Logging.logException(getString(e.message), e);

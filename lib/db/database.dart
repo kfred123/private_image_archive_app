@@ -17,6 +17,12 @@ class DataBaseFactory {
       Hive.registerAdapter(SettingsAdapter());
       Hive.registerAdapter(ArchivedItemAdapter());
       initialized = true;
+      var conection = await connect();
+
+      // ToDo in windows app the db is always empty after starting it new
+      var items = await conection.query<ArchivedItem>((p0) => true);
+      var list = items.toList();
+      int x = 0;
     }
   }
 

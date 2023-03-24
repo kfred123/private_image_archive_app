@@ -1,17 +1,17 @@
 import 'dart:async';
-
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:private_image_archive_app/db/database.dart';
 import 'package:private_image_archive_app/logic/Permissions.dart';
 import 'package:private_image_archive_app/logic/archiver.dart';
 import 'package:private_image_archive_app/logic/server.dart';
 import 'package:private_image_archive_app/logic/settings_provider.dart';
-import 'package:uuid/uuid.dart';
-import 'db/settings.dart';
+
 import 'settings.dart';
 import 'debugPage.dart';
 import 'logic/media_provider.dart' as logic;
-import 'sidenavigation.dart';
 import 'logging.dart';
 
 
@@ -64,24 +64,38 @@ class _SyncPageState extends State<SyncPage> {
     });*/
   }
 
-  void _start() async {
-    if (await PermissionManager.requestPermissions()) {
-      String baseUrl = await SettingsProvider.getServerUrl();
-      DataBaseConnection dataBaseConnection = await DataBaseFactory.connect();
-      _archiver = new Archiver(new ServerAccess(baseUrl), dataBaseConnection);
-      logic.MediaProvider imageProvider = new logic.MediaProvider();
-      Stream<logic.MediaItem> mediaItemStream = imageProvider.readAllMediaData();
+  void _startSync(Stream<logic.MediaItem> mediaItemStream) async {
 
+    String baseUrl = await SettingsProvider.getServerUrl();
+    DataBaseConnection dataBaseConnection = await DataBaseFactory.connect();
+    _archiver = new Archiver(new ServerAccess(baseUrl), dataBaseConnection);
+    _archiver!.archiveMediaItems(mediaItemStream);
+    _timer = Timer.periodic(Duration(milliseconds: 100), (timer) {
+      this.setState(() => {});
+      if(_archiver!.isDoneArchiving()) {
+        //timer.cancel();
+      }
+    });
+  }
+
+  void _startSyncFolder() async {
+    String? uploadFolder = await FilePicker.platform.getDirectoryPath();
+    if (uploadFolder != null && uploadFolder.isNotEmpty) {
+      logic.MediaProvider mediaProvider = new logic.MediaProvider();
+      Stream<logic.MediaItem> items =
+          mediaProvider.readAllMediaDataFromFolder(uploadFolder);
+      _startSync(items);
+    }
+  }
+
+  void _startSyncMobile() async {
+    if (await PermissionManager.requestPermissions()) {
+      logic.MediaProvider imageProvider = new logic.MediaProvider();
+      Stream<logic.MediaItem> mediaItemStream = imageProvider.readAllMediaDataFromPhone();
+      _startSync(mediaItemStream);
       //for(logic.MediaItem image in mediaItems) {
       //  extensions.add(path.extension(image.getPath()));
       //}
-      _archiver!.archiveMediaItems(mediaItemStream);
-      _timer = Timer.periodic(Duration(milliseconds: 100), (timer) {
-        this.setState(() => {});
-        if(_archiver!.isDoneArchiving()) {
-          //timer.cancel();
-        }
-      });
     }
   }
 
@@ -125,6 +139,40 @@ class _SyncPageState extends State<SyncPage> {
 
   String getIntOrEmptyString(int? number) {
     return number != null ? number.toString() : "";
+  }
+
+  List<Widget> getActionButtons() {
+    List<Widget> buttons = List.empty(growable: true);
+    if(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
+      buttons.add(Align(
+        alignment: Alignment.bottomRight,
+        child: FloatingActionButton(
+          onPressed: _startSyncMobile,
+          tooltip: 'Run',
+          heroTag: null,
+          child: Icon(Icons.backup),
+        ),
+      ));
+    } else {
+      buttons.add(Align(
+          alignment: Alignment.bottomRight,
+          child: FloatingActionButton(
+            onPressed: () {
+              _startSyncFolder();
+            },
+            child: Icon(Icons.file_upload),
+          )
+      ));
+    }
+    buttons.add(Align(
+        alignment: Alignment.bottomLeft,
+        child: FloatingActionButton(
+          onPressed: _cancel,
+          tooltip: 'Cancel',
+          heroTag: null,
+          child: Icon(Icons.cancel),
+        )));
+    return buttons;
   }
 
   @override
@@ -172,35 +220,7 @@ class _SyncPageState extends State<SyncPage> {
         ),
       ),
       floatingActionButton: Stack(
-        children: <Widget>[
-          Align(
-            alignment: Alignment.bottomRight,
-            child: FloatingActionButton(
-              onPressed: () {
-                // ToDo FileUpload for desktop apps
-            },
-              child: Icon(Icons.upload)
-              )
-          ),
-          Align(
-            alignment: Alignment.bottomRight,
-            child: FloatingActionButton(
-              onPressed: _start,
-              tooltip: 'Run',
-              heroTag: null,
-              child: Icon(Icons.backup),
-            ),
-          ),
-          Align(
-            alignment: Alignment.bottomLeft,
-            child: FloatingActionButton(
-              onPressed: _cancel,
-              tooltip: 'Cancel',
-              heroTag: null,
-              child: Icon(Icons.cancel),
-            ),
-          )            ,
-        ],
+        children: getActionButtons()
       ),
     );
   }
