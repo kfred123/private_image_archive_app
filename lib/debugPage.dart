@@ -3,6 +3,7 @@ import 'package:path/path.dart';
 import 'package:private_image_archive_app/db/database.dart';
 import 'package:private_image_archive_app/logic/server.dart';
 import 'package:private_image_archive_app/logic/settings_provider.dart';
+import 'package:private_image_archive_app/syncpage.dart';
 import 'package:private_image_archive_app/uiutils.dart';
 import 'db/database.dart';
 import 'db/archived_item.dart';
@@ -41,14 +42,19 @@ class DebugWidget extends StatelessWidget {
     } catch(e) {
       showDebugDialog(_context!, e.toString());
     }
+    Navigator.pushNamed(_context!, SyncPage.RouteName);
   }
 
   void clearEntries() async {
     DataBaseConnection connection = await DataBaseFactory.connect();
     connection.clearTable<ArchivedItem>();
+    showDebugDialog(_context!, "DONE");
+    Navigator.pushNamed(_context!, SyncPage.RouteName);
   }
 
   void deleteDatabase() async {
     DataBaseFactory.delete();
+    showDebugDialog(_context!, "DONE");
+    Navigator.pushNamed(_context!, SyncPage.RouteName);
   }
 }

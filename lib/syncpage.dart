@@ -177,7 +177,6 @@ class _SyncPageState extends State<SyncPage> {
 
   @override
   Widget build(BuildContext context) {
-    Logging.logInfo("start building SyncPage");
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),

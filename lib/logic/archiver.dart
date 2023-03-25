@@ -74,7 +74,7 @@ class Archiver {
   }
 
   void setMediaItemArchived(Logic.MediaItem mediaItem) {
-    ArchivedItem archivedItem = ArchivedItem.fromMediaItem(mediaItem.getPath(), mediaItem.getPath());
+    ArchivedItem archivedItem = ArchivedItem.fromMediaItem(mediaItem.getPath(), mediaItem.getId());
     _dataBaseConnection.updateOrInsert(archivedItem);
   }
 
