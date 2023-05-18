@@ -16,7 +16,7 @@ import 'package:private_image_archive_app/logging.dart';
 import 'package:sprintf/sprintf.dart';
 
 class Archiver {
-  final int maxProcessingAtOnce = 10;
+  final int maxProcessingAtOnce = 1;
 
   int totalItems = 0;
   int processedItems = 0;
